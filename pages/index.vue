@@ -1,19 +1,30 @@
 <script setup lang="ts">
 // import gsap from 'gsap'
-import { NearestFilter, TextureLoader } from 'three'
+import {
+  NearestFilter,
+  TextureLoader,
+  Scene,
+  MeshToonMaterial,
+  Mesh,
+  TorusGeometry,
+  DirectionalLight,
+  Group,
+  PerspectiveCamera,
+  WebGLRenderer,
+  Clock,
+} from 'three'
 import { Sizes } from '~/interfaces/config.interface'
 
 const canvas = ref<HTMLCanvasElement>()
 const sizes = ref<Sizes>({ width: 0, height: 0 })
 
-const textureLoader = new TextureLoader()
-const gradientTexture = textureLoader.load('/assets/textures/gradients/3.jpg')
-gradientTexture.magFilter = NearestFilter
-
 onBeforeMount(() => {
   updateSizes()
-  setupScene()
   window.addEventListener('resize', onResizeWindow)
+})
+
+onMounted(() => {
+  render()
 })
 
 onBeforeUnmount(() => {
@@ -29,12 +40,83 @@ function updateSizes(): void {
   sizes.value.height = window.innerHeight
 }
 
-function setupScene(): void {
+function render(): void {
+  const textureLoader = new TextureLoader()
+  const gradientTexture = textureLoader.load('/assets/textures/gradients/3.jpg')
+  gradientTexture.magFilter = NearestFilter
 
+  const scene = new Scene()
+
+  const material = new MeshToonMaterial({
+    color: '913854',
+    gradientMap: gradientTexture,
+  })
+
+  const mesh = new Mesh(new TorusGeometry(1, 0.4, 16, 60), material)
+
+  mesh.position.y = 0
+  mesh.position.x = 0
+
+  const directionalLight = createLights()
+  const [cameraGroup, camera] = createCamera()
+
+  scene.add(mesh)
+  scene.add(directionalLight)
+  scene.add(cameraGroup)
+
+  const renderer = new WebGLRenderer({
+    canvas: canvas.value,
+    alpha: true,
+  })
+  renderer.setSize(sizes.value.width, sizes.value.height)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
+  const clock = new Clock()
+  let previousTime = 0
+
+  const tick = () => {
+    const elapsedTime = clock.getElapsedTime()
+    const deltaTime = elapsedTime - previousTime
+    previousTime = elapsedTime
+
+    // Animate camera
+    // cameraGroup.position.y = (-scrollY / sizes.height) * objectDistance
+
+    // const parallaxX = cursor.x
+    // const parallaxY = -cursor.y
+    // camera.position.x += (parallaxX - camera.position.x) * deltaTime
+    // camera.position.y += (parallaxY - camera.position.y) * deltaTime
+
+    // Animate meshed
+    // for (const mesh of sectionMeshes) {
+    //   mesh.rotation.x += deltaTime * 0.1
+    //   mesh.rotation.y += deltaTime * 0.12
+    // }
+
+    // Render
+    renderer.render(scene, camera)
+
+    // Call tick again on the next frame
+    window.requestAnimationFrame(tick)
+  }
+
+  tick()
 }
 
-// // Scene
-// const scene = new THREE.Scene()
+function createLights(): DirectionalLight {
+  const directionalLight = new DirectionalLight('#ffffff', 1)
+  directionalLight.position.set(1, 1, 0)
+  return directionalLight
+}
+
+function createCamera(): [Group, PerspectiveCamera] {
+  const cameraGroup = new Group()
+  const camera = new PerspectiveCamera(35, sizes.value.width / sizes.value.height, 0.1, 100)
+  camera.position.z = 6
+  cameraGroup.add(camera)
+
+  return [cameraGroup, camera]
+}
 
 // /**
 //  * Objects
@@ -88,13 +170,6 @@ function setupScene(): void {
 // const points = new THREE.Points(particlesGeometry, particlesMaterial)
 // scene.add(points)
 
-// /**
-//  * Lights
-//  */
-// const directionalLight = new THREE.DirectionalLight('#ffffff', 1)
-// directionalLight.position.set(1, 1, 0)
-// scene.add(directionalLight)
-
 // window.addEventListener('resize', () => {
 //   // Update sizes
 //   sizes.width = window.innerWidth
@@ -108,28 +183,6 @@ function setupScene(): void {
 //   renderer.setSize(sizes.width, sizes.height)
 //   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 // })
-
-// /**
-//  * Camera
-//  */
-// // Group
-// const cameraGroup = new THREE.Group()
-// scene.add(cameraGroup)
-
-// // Base camera
-// const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 100)
-// camera.position.z = 6
-// cameraGroup.add(camera)
-
-// /**
-//  * Renderer
-//  */
-// const renderer = new THREE.WebGLRenderer({
-//   canvas: canvas,
-//   alpha: true
-// })
-// renderer.setSize(sizes.width, sizes.height)
-// renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 // /**
 //  * Scroll
@@ -162,40 +215,6 @@ function setupScene(): void {
 //   cursor.x = event.clientX / sizes.width - 0.5
 //   cursor.y = event.clientY / sizes.height - 0.5
 // })
-
-// /**
-//  * Animate
-//  */
-// const clock = new THREE.Clock()
-// let previousTime = 0
-
-// const tick = () => {
-//   const elapsedTime = clock.getElapsedTime()
-//   const deltaTime = elapsedTime - previousTime
-//   previousTime = elapsedTime
-
-//   // Animate camera
-//   cameraGroup.position.y = (-scrollY / sizes.height) * objectDistance
-
-//   const parallaxX = cursor.x
-//   const parallaxY = -cursor.y
-//   camera.position.x += (parallaxX - camera.position.x) * deltaTime
-//   camera.position.y += (parallaxY - camera.position.y) * deltaTime
-
-//   // Animate meshed
-//   for (const mesh of sectionMeshes) {
-//     mesh.rotation.x += deltaTime * 0.1
-//     mesh.rotation.y += deltaTime * 0.12
-//   }
-
-//   // Render
-//   renderer.render(scene, camera)
-
-//   // Call tick again on the next frame
-//   window.requestAnimationFrame(tick)
-// }
-
-// tick()
 </script>
 
 <template>
@@ -203,13 +222,13 @@ function setupScene(): void {
     <canvas ref="canvas" class="webgl"></canvas>
 
     <section class="section">
-        <h1>My Portfolio</h1>
+      <h1>My Portfolio</h1>
     </section>
     <section class="section">
-        <h2>My projects</h2>
+      <h2>My projects</h2>
     </section>
     <section class="section">
-        <h2>Contact me</h2>
+      <h2>Contact me</h2>
     </section>
   </div>
 </template>
