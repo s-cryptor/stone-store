@@ -7,6 +7,12 @@
     "preview": "nuxt preview"
   },
   "devDependencies": {
+    "@types/three": "^0.143.1",
     "nuxt": "3.0.0-rc.8"
+  },
+  "dependencies": {
+    "gsap": "^3.11.0",
+    "lil-gui": "^0.17.0",
+    "three": "^0.143.0"
   }
 }
